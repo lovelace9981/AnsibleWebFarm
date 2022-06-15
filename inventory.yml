@@ -1,0 +1,41 @@
+---
+  webservers:
+    hosts:
+      m1.swapfinal:
+        ansible_host: 192.168.100.4
+      m2.swapfinal:
+        ansible_host: 192.168.100.5
+      m3.swapfinal:
+        ansible_host: 192.168.100.6
+      m4.swapfinal:
+        ansible_host: 192.168.100.7
+      m5.swapfinal:
+        ansible_host: 192.168.100.8
+      m6.swapfinal:
+        ansible_host: 192.168.100.9
+
+  loadbalancer:
+    hosts:
+      m0.swapfinal:
+        ansible_host: 192.168.100.2
+
+  databases:
+    hosts:
+      m20.swapfinal:
+        ansible_host: 192.168.100.20
+      m21.swapfinal:
+        ansible_host: 192.168.100.21
+
+  datacenter:
+    children:
+      datacenterweb:
+      databases:
+    vars:
+      ansible_user: vagrant
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+
+
+  datacenterweb:
+    children:
+      webservers:
+      loadbalancer:

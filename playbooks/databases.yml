@@ -1,0 +1,93 @@
+---
+- hosts: databases
+  become: yes
+
+  vars:
+   root_password_mysql: pass
+
+  tasks:
+  - name: Install MariaDB server
+    ansible.builtin.dnf:
+      name: mariadb-server
+      state: present
+      update_cache: yes
+
+  - name: Push .my.cnf with root password
+    copy:
+        src: ../templates/my.cnf
+        dest: /home/vagrant/.my.cnf
+        owner: vagrant
+        group: vagrant
+
+  - name: Obtener el estado de MariaDB y fijando su demonio en autoarranque
+    ansible.builtin.systemd:
+      name: mariadb.service
+      state: started
+      enabled: yes
+
+  - name: Adds Python MySQL support on RedHat Platforms - mysql_secure_installation
+    pip:
+        name: PyMySQL
+        state: present
+
+  - name: update mysql root password for root account
+    mysql_user:
+        name: root
+        password: "{{ root_password_mysql }}"
+        check_implicit_admin: yes
+        login_user: root
+        state: present
+
+  - name: Deletes anonymous MySQL server user for ansible_fqdn
+    mysql_user:
+        login_user: root
+        login_password: "{{ root_password_mysql }}"
+        user: ""
+        host: "{{ inventory_hostname }}"
+        state: absent
+
+  - name: Deletes anonymous MySQL server user for localhost
+    mysql_user:
+        login_user: root
+        login_password: "{{ root_password_mysql }}"
+        user: ""
+        state: "absent"
+
+  - name: Secures the MySQL root user for IPV6 localhost (::1)
+    mysql_user:
+        login_user: root
+        login_password: "{{ root_password_mysql }}"
+        user: "root"
+        password: "{{ root_password_mysql }}"
+        host: "::1"
+
+  - name: Secures the MySQL root user for IPV4 localhost (127.0.0.1)
+    mysql_user:
+        login_user: root
+        login_password: "{{ root_password_mysql }}"
+        user: root
+        password: "{{ root_password_mysql }}"
+        host: "127.0.0.1"
+
+  - name: Secures the MySQL root user for localhost domain (localhost)
+    mysql_user:
+        login_user: root
+        login_password: "{{ root_password_mysql }}"
+        user: root"
+        password: "{{ root_password_mysql }}"
+        host: localhost"
+
+  - name: Secures the MySQL root user for server_hostname domain
+    mysql_user:
+        login_user: root
+        login_password: "{{ root_password_mysql }}"
+        user: "root"
+        password: "{{ root_password_mysql }}"
+        host: "{{ inventory_hostname }}"
+
+  - name: Removes the MySQL test database
+    mysql_db:
+        login_user: root
+        login_password: "{{ root_password_mysql }}"
+        db: test
+        state: absent

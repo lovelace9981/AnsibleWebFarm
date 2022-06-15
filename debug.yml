@@ -1,0 +1,9 @@
+---
+- hosts: loadbalancer
+
+  tasks:
+   - debug: msg="web is {{ hostvars[item]['ansible_host'] }}"
+     with_items:  "{{ groups['webservers'] }}"
+
+   - debug: msg="databases is {{ hostvars[item]['ansible_host'] }}"
+     with_items:  "{{ groups['databases'] }}"

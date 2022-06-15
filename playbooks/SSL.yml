@@ -1,0 +1,98 @@
+---
+
+- hosts: m0.swapfinal
+  become: true
+
+  vars:
+   CApassphrase: SWAP
+
+  tasks:
+  - name: Installing pip3 package
+    ansible.builtin.apt:
+       name: python3-pip
+       state: present
+       update_cache: yes
+
+  - name: Installing required pip3 package cryptographyc
+    pip:
+       name: cryptography>=1.2.3
+
+  - name: Creando certificados SSL - CA File Private Key
+    community.crypto.openssl_privatekey:
+      path: /etc/ssl/private/CA.key
+      type: RSA
+      size: 4096
+      passphrase: "{{ CApassphrase }}"
+      cipher: auto
+
+  - name: Creando certificados SSL - CSR Certificate Signed Request CA
+    community.crypto.openssl_csr_pipe:
+      privatekey_path: /etc/ssl/private/CA.key
+      privatekey_passphrase: "{{ CApassphrase }}"
+      digest: "sha512"
+      country_name: ES
+      common_name: SWAP CA
+      organization_name: "SWAP"
+      use_common_name_for_san: false
+      basic_constraints:
+        - 'CA:TRUE'
+      key_usage:
+        - keyCertSign
+      key_usage_critical: true
+    register: ca_csr
+
+  - name: Creando certificados CA desde el CSR
+    community.crypto.x509_certificate:
+     path: /etc/ssl/certs/CA.crt
+     csr_content: "{{ca_csr.csr}}"
+     privatekey_path: /etc/ssl/private/CA.key
+     privatekey_passphrase: "{{ CApassphrase }}"
+     provider: selfsigned
+
+  - name: Creando certificados SSL - mswap-swapfinal Key
+    community.crypto.openssl_privatekey:
+     path: /etc/ssl/private/mswap.key
+     type: RSA
+     size: 4096
+
+  - name: Creando certificados SSL - mswap-swapfinal Cert
+    community.crypto.openssl_csr_pipe:
+     privatekey_path: /etc/ssl/private/mswap.key
+     country_name: ES
+     common_name: SWAP CA
+     organization_name: "SWAP"
+     subject_alt_name:
+      - "DNS:swapfinal"
+    register: webcsr
+
+  - name: Creando Certificado SSL Firmando certificado SSL con CA mswap-swapfinal
+    community.crypto.x509_certificate:
+     path: /etc/ssl/certs/mswap.crt
+     csr_content: "{{webcsr.csr}}"
+     provider: ownca
+     ownca_path: /etc/ssl/certs/CA.crt
+     ownca_privatekey_path: /etc/ssl/private/CA.key
+     ownca_privatekey_passphrase: "{{ CApassphrase }}"
+     ownca_not_after: +365d  # valid for one year
+     ownca_not_before: "-1d"  # valid since yesterday
+
+  - name: Fetch and Pull Cert CA to local machine
+    fetch:
+      src: /etc/ssl/certs/CA.crt
+      dest: ../certs/
+      flat: yes
+
+  - name: Fetch and Pull Key Servers to local machine
+    fetch:
+      src: /etc/ssl/private/mswap.key
+      dest: ../certs/
+      flat: yes
+
+  - name: Fetch and Pull Cert Servers to local machine
+    fetch:
+     src: /etc/ssl/certs/mswap.crt
+     dest: ../certs/
+     flat: yes
+
+- name: Running copy Playbook
+  import_playbook: SSLcopy.yml

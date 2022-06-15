@@ -1,0 +1,34 @@
+---
+- hosts: loadbalancer
+  become: yes
+
+  tasks:
+  - name: Install Nginx as Load Balancer
+    ansible.builtin.apt:
+      name: nginx
+      state: present
+      update_cache: yes
+
+  - name: Obtener el estado de Nginx y fijando su demonio en autoarranque
+    ansible.builtin.systemd:
+     name: nginx
+     state: started
+     enabled: yes
+
+  - name: Desactivando la web por defecto
+    command:
+      cmd: unlink /etc/nginx/sites-enabled/default
+    ignore_errors: yes
+
+  - name: generate /etc/nginx/nginx.conf dinámico
+    ansible.builtin.template:
+      src: ../templates/lbnginx.j2
+      dest: /etc/nginx/nginx.conf
+      owner: root
+      group: root
+      mode: '0644'
+
+  - name: Restarting nginx loadbalancer
+    ansible.builtin.systemd:
+     name: nginx
+     state: restarted

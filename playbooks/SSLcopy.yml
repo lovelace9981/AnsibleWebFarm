@@ -1,0 +1,29 @@
+---
+
+- hosts: webservers
+  become: yes
+
+  tasks:
+  - name: Push Cert CA to local machine
+    copy:
+     src: ../certs/CA.crt
+     dest: /etc/ssl/certs/
+     owner: root
+     group: root
+     mode: '0644'
+
+  - name: Push Key Servers to local machine
+    copy:
+     src: ../certs/mswap.key
+     dest: /etc/ssl/private/
+     owner: root
+     group: root
+     mode: '0644'
+
+  - name: Push Cert Servers to local machine
+    copy:
+     src: ../certs/mswap.crt
+     dest: /etc/ssl/certs/
+     owner: root
+     group: root
+     mode: '0644'

@@ -1,0 +1,44 @@
+# {{ ansible_managed }}
+
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+}
+
+http {
+    log_format upstreamlog 'Client_addr: $remote_addr - Server_addr: $upstream_addr - Response_time_latency: $upstream_response_time - Response_status: $upstream_status';
+
+    upstream upstreamswapfinal {
+      {% for host in groups['webservers'] %}
+        server {{ hostvars[host]['ansible_host'] }}:443;
+      {% endfor %}
+    }
+
+    server {
+        listen 80;
+        server_name swapfinal;
+
+        return 301 https://swapfinal;
+    }
+
+    server {
+        listen 443 ssl;
+
+        ssl_certificate /etc/ssl/certs/mswap.crt;
+        ssl_certificate_key /etc/ssl/private/mswap.key;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_prefer_server_ciphers on;
+
+        location / {
+            proxy_pass https://upstreamswapfinal;
+        }
+
+        access_log /var/log/nginx/upstream.log upstreamlog;
+    }
+
+}

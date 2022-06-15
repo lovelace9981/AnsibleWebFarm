@@ -1,0 +1,48 @@
+---
+- hosts: webservers
+  become: yes
+
+  tasks:
+  - name: Install Nginx
+    ansible.builtin.apt:
+      name: nginx
+      state: present
+      update_cache: yes
+
+  - name: Install php
+    ansible.builtin.apt:
+      name: php
+      state: present
+
+  - name: Install php7.4-fpm
+    ansible.builtin.apt:
+     name: php-fpm
+     state: present
+
+  - name: Obtener el estado de Nginx y fijando su demonio en autoarranque
+    ansible.builtin.systemd:
+      name: nginx.service
+      state: started
+      enabled: yes
+
+  - name: Push site configuration of NGINX
+    copy:
+     src: ../templates/defaultsite.conf
+     dest: /etc/nginx/sites-available/default
+     owner: root
+     group: root
+     mode: '0644'
+     backup: yes
+
+  - name: Push index.php of NGINX
+    copy:
+     src: ../templates/index.php
+     dest: /var/www/html/index.php
+     owner: root
+     group: root
+     mode: '0644'
+
+  - name: Restarting nginx webservers
+    ansible.builtin.systemd:
+     name: nginx
+     state: restarted
