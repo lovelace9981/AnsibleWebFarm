@@ -1,8 +1,8 @@
 # AnsibleWebFarm
 
-Es un despliegue de una Granja Web escalable horizontalmente con Vagrant y Ansible.
+Es un despliegue de una Granja Web escalable horizontalmente con Vagrant y Ansible. Quedando como despliegue de IaC Ifraestructure as Code como en la imagen.
 
-
+![vagrant6](https://user-images.githubusercontent.com/64685260/174110243-de33bc97-7352-41c6-94f8-34bc964ad86e.png)
 
 
 ## Requisitos de instalación para Vagrant: 
