@@ -1,6 +1,10 @@
 # AnsibleWebFarm
 
-Es un despliegue de una Granja Web escalable horizontalmente con Vagrant y Ansible. Quedando como despliegue de IaC Ifraestructure as Code como en la imagen.
+## La documentación tiene licencia
+[![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+
+## Explicación del repositorio
+Despliegue de una Granja Web escalable horizontalmente con Vagrant y Ansible. Quedando como despliegue de IaC Ifraestructure as Code como en la imagen.
 
 ![vagrant6](https://user-images.githubusercontent.com/64685260/174110243-de33bc97-7352-41c6-94f8-34bc964ad86e.png)
 
