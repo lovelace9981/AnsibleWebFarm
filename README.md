@@ -21,3 +21,23 @@ $ sudo apt-get install qemu libvirt-daemon-system libvirt-clients ebtables dnsma
 $ sudo apt-get install libxslt-dev libxml2-dev libvirt-dev zlib1g-dev ruby-dev
 $ sudo apt-get install libguestfs-tools
 ```
+
+## Requisitos de instalación para Ansible: 
+
+``` console
+$ echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu focal main" | sudo tee /etc/apt/sources.list.d/ansible.list
+$ sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
+$ sudo apt update
+$ sudo apt install ansible
+```
+
+## Requisitos de instalación para el Ansible Collection de Community.Crypto y Community.MySQL: 
+
+! Necesita dependencias en el lado del servidor. Se instalan con el PlayBook automáticamente.
+
+``` console
+# Instalación de la colección de SSL para crear CA
+$ ansible-galaxy collection install community.crypto
+# Instalación de la colección de MySQL 
+$ ansible-galaxy collection install community.mysql
+```
