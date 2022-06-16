@@ -1,2 +1,3 @@
 .vagrant/
 certs/*
+memoria/*.gz
