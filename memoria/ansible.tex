@@ -274,7 +274,7 @@ Para instalar la colección de Mysql necesaria para realizar el proceso.
 
 \textbf{El playbook de los SGBD es el siguiente:}
 \vspace{5mm}
-\lstinputlisting[style=myyaml]{../playbooks/loadbalancer.yml}
+\lstinputlisting[style=myyaml]{../playbooks/databases.yml}
 \vspace{5mm}
 
 \textbf{El template del fichero my.cnf:}
@@ -288,6 +288,13 @@ Para instalar la colección de Mysql necesaria para realizar el proceso.
 	\caption{Proceso de instalación del SGBD y mysql\_secure\_installation.}
 \end{figure}
 
+Finalmente cuando termina todas las ejecuciones recursivas de los playbook nos muestra un resumen de todos los estados alcanzados. Si son todos \textbf{ok y changed}. Significa que se ha ejecutado de manera correcta.
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{ansible14}
+	\caption{Estado final de la ejecución.}
+\end{figure}
+s
 \newpage
 \section{Conclusiones}
 
