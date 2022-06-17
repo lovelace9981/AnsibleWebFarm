@@ -20,7 +20,7 @@
       cmd: unlink /etc/nginx/sites-enabled/default
     ignore_errors: yes
 
-  - name: generate /etc/nginx/nginx.conf dinámico
+  - name: generate dynamic /etc/nginx/nginx.conf
     ansible.builtin.template:
       src: ../templates/lbnginx.j2
       dest: /etc/nginx/nginx.conf

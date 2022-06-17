@@ -40,7 +40,191 @@
 
 \section{Abstract}
 
-% \vspace{5mm}
+Este proyecto, es una demostración de la mejora y automatización de los trabajos realizados durante el curso 2021 y 2022 en la asignatura de SWAP.
+\vspace{5mm}
+
+Durante los trabajos anteriores, hemos conseguido documentar y elaborar un sistema estático de una granja web. Pero a la hora de re-desplegarlo en cualquier entorno,
+tanto de producción como de desarrollo. Nos encontramos con que el despliegue consume muchos recursos humanos, económicos y de tiempo. Aún teniendo una memoria y datos
+previos del primer entorno desarrollado de manera manual que nos guíe y acelere el proceso.
+\vspace{5mm}
+
+Tampoco podemos contar con herramientas creadas con Scripting de Bash o alternativas, ya que son herramientas que solo se pueden desarrollar para especializarse en una cosa y dependen mucho de la línea de comandos en la que se esté ejecutando en el momento. Como ejemplo: tenemos que instalar Apache2, la instalación sabemos que se haría por SSH, pero si tenemos innumerables servidores web esperando y desplegados. El provisionamiento, con la herramienta creada a través de Bash que muy dificilmente es escalable. Además no contamos directamente con la gestión de errores y todo ello depende de la salida estándar STDOUT. Por lo que tendríamos que desarrollar un controlador de errores a partir de esa salida. Lo cual haría del proyecto menos viable aún y aún más especializado.
+\vspace{5mm}
+
+También en bash, al cambiar entre versiones de software la gestión de errores, métodos de instalación, etc... Quedaría automáticamente obsoleto (deprecated). Haciendo del proyecto poco reutilizable o ni siquiera se podrá reutilizar. Destinando a la basura tiempo de trabajo y dinero.
+\vspace{5mm}
+
+Como herramienta de despliegue de máquinas virtuales y instancias (llamadas por el software que usamos como \textbf{boxes}) usamos Vagrant que permite definir una infraestructura con código. O denominada correctamente como \emph{Infraestructure As Code IaC o Orquestación}, que permite un despliegue de la misma configuración con un código en local en servidores con hypervisor, en workstations para probarlo, en los proveedores de Cloud. Con el objetivo de asegurar de que todo un equipo tanto de desarrollo como de infraestructura puedan trabajar bajo las mismas condiciones físicas.
+\vspace{5mm}
+
+Por ello Ansible es la herramienta de provisionamiento más importante y quizás el futuro o el punto de partida de otras herramientas mejoradas. Permite a través de código el control de los estados de instalación, control de los servicios disponibles en el sistema, realizar ajustes específicos a un grupo objetivo más pequeño, un sin fin de distintas soluciones que unidas permiten de manera \textbf{idempotente} que se de el mismo resultado sin importar qué versión de software de paquetería tenga, versión de servidor SQL, etc...
+\vspace{5mm}
+
+\textbf{Nota:} No vamos a pararnos a explicar los ajustes dados a cada servicio y a SSL. Son los mismos ajustes explicados en las prácticas anteriores disponibles en mi repositorio de memorias de SWAP. Disponible en la bibliografía.
+
+
+
+\newpage
+\section{Definición y despliegue de la infraestructura}
+
+La herramienta utilizada para tal propósito es Vagrant, esto nos permite asegurar los despliegues que son iguales en todos los sitios en los que se disponga del mismo Vagrantfile que es el fichero que define la infraestructura.
+\vspace{5mm}
+
+\subsection{Instalación de Vagrant en Debian/Ubuntu}
+
+La instalación en sistemas Linux basados en Debian consiste en la ejecución de los siguientes comandos:
+
+\begin{lstlisting}[style=mybash]
+$ curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+$ sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+$ sudo apt-get update && sudo apt-get install vagrant
+\end{lstlisting}
+
+Instalación de libvirt y la librería de Vagrant Libvirt necesarios en sistemas Debian:
+
+\begin{lstlisting}[style=mybash]
+$ sudo apt-get build-dep vagrant ruby-libvirt
+$ sudo apt-get install qemu libvirt-daemon-system libvirt-clients ebtables dnsmasq-base
+$ sudo apt-get install libxslt-dev libxml2-dev libvirt-dev zlib1g-dev ruby-dev
+$ sudo apt-get install libguestfs-tools
+\end{lstlisting}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant0}
+	\caption{Instalación de Vagrant en Debian 11.}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant7}
+	\caption{Instalación de Vagrant libvirt provider en Debian 11.}
+\end{figure}
+
+
+Una vez instalado Vagrant, procederemos a crear nuestro fichero de despliegue llamado \textbf{Vagrantfile} por defecto, que nos da una idea general de cómo trabaja Vagrant con los proveedores y boxes. Además de generar el entorno que necesita Vagrant para trabajar ya que tiene una carpeta oculta con sus configuraciones dentro de la carpeta de trabajo.
+
+\begin{lstlisting}[style=mybash]
+$ vagrant init
+\end{lstlisting}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant1}
+	\caption{Creando un Vagrantfile por defecto.}
+\end{figure}
+
+\newpage
+\subsection{Fichero Vagrantfile}
+
+El fichero Vagrantfile del proyecto es como sigue:
+
+\lstinputlisting[style=myruby]{../Vagrantfile}
+
+\subsection{Configuración de los parámetros de red básicos}
+
+El Vagrantfile permite un provisionamiento básico que utilizamos para configurar parámetros de red.
+
+\begin{enumerate}
+    \item Parte de SSH, DNS y Redes por defecto. Son parámetros de aprovisionamiento aplicados a todas las máquinas del Vagrantfile sin distinción.
+    \begin{enumerate}
+        \item Indicamos que queremos pasarle nuestro cliente local de SSH  forward\_agent para configurar las conexiones SSH para un posterior uso.
+        \item Indicamos la ruta de nuestra clave de SSH privada, que automáticamente Vagrant la utiliza para poder realizar conexiones. Esta parte se encuentra desactivada porque Vagrant no consigue trabajar bien con las claves SSH del usuario. Usa unas propias.
+        \item Desactivamos las conexiones de NFS, ya que Vagrant asegura que tengamos carpetas compartidas con las que comunicar ficheros al servidor, en nuestro caso no son necesarias y es una característica con muchos bugs y fallos.
+        \item Realizamos un aprovisionamiento general que consiste en que almacene bien la clave pública de SSH, esto es debido a que Vagrant puede no configurarla bien para nuestro cliente SSH para administrar con consola las máquinas. Entonces debemos poner esto para que podamos conectarnos correctamente, así como no borrar la clave pública con la cual Vagrant se conecta a través de la red de gestión para comprobar el estado de cada una de las máquinas.
+        \item Realizamos otro aprovisionamiento consistente en indicarle los servidores DNS correctos, ya que en la UGR su servidor DNS da muchos problemas para realizar conexiones con máquinas que no tengan el Certificado de conexión de WiFi. O en otros sitios donde el DNS recibido por DHCP no funcione correctamente, ya que en KVM se lee del /etc/resolv.conf del sistema hypervisor.
+        \item Finalmente el último aprovisionamiento es que le indicamos que desactive como Gateway la ip del ``router'' de la red de gestión de Vagrant que la usa el software para apagar, encender máquinas y comprobar sus estados. Configurando como ruta por defecto la de nuestra red preparada con nombre de \textbf{ansible} para evitar conflictos con la asignación dinámica de la red de gestión.
+    \end{enumerate}
+\end{enumerate}
+
+Todo ello se configura en el Vagrantfile de la siguiente manera:
+
+\lstinputlisting[style=myruby, firstline=7, lastline=21]{../Vagrantfile}
+
+\subsection{Parámetros del proveedor}
+
+Todas las \textbf{boxes} que se definan en el Vagrantfile tendrán las mismas características en cuanto al hardware virtualizado. En el fichero de configuración le indicamos al proveedor las características hardware que tienen como el número de núcleos de procesamiento, memoria RAM, topología de la CPU (esto solo se define para KVM por la alta especialización en emulación de QEMU. Sin embargo si es virtualbox el proveedor por defecto no haría falta hacer tanta especificación ya que es más básico) y el driver de virtualización a utilizar KVM que usa aceleración por hardware. Para realizar el despliegue de cada una de las \textbf{boxes} indicando las siguientes líneas, respectivamente:
+
+\lstinputlisting[style=myruby, firstline=23, lastline=29]{../Vagrantfile}
+
+\subsection{Definición de los servidores}
+
+Consta de varias partes consistentes en:
+\begin{enumerate}
+    \item Definimos el tipo de \textbf{box} que queremos. Un box es una imagen de Sistema Operativo preparada para trabajar con Vagrant y recibir todas los aprovisionamientos que se definan.
+    \item Definimos el hostname, esto se define en cada definición de máquina virtual por separado.
+    \item Definimos la IP estática, máscara de subred y la red privada que se crea a través del proveedor KVM que tiene de nombre como ansible. En la cual \textbf{no} tenemos DHCP para evitar que cualquier máquina futura tenga la misma IP que una estática.
+\end{enumerate}
+
+La unica diferencia entre los servidores de bases de datos y el resto es que usamos otro tipo de \textbf{box} que utiliza RockyLinux 8 como se puede observar en el bloque de configuración siguiente:
+\vspace{5mm}
+
+\textbf{Box de Debian: Se aplica a los servidores web y sus balanceadores de carga}
+\lstinputlisting[style=myruby, firstline=31, lastline=37]{../Vagrantfile}
+\vspace{5mm}
+
+\textbf{Box de Rocky: Solo se aplica a los servidores que contienen un SGBD}
+\lstinputlisting[style=myruby, firstline=87, lastline=93]{../Vagrantfile}
+
+\newpage
+\subsection{Despliegue de máquinas del Vagrantfile}
+
+Una vez tenemos nuestro fichero de despliegue Vagrantfile completo con nuestras necesidades, procedemos a ejecutar el siguiente comando que levantará toda la infraestructura especificada:
+
+\begin{lstlisting}[style=mybash]
+$ vagrant up
+\end{lstlisting}
+
+La primera parte es similar a sistemas Docker. Vagrant comprueba si los ficheros de imagen de los box existen en el sistema. Si no existen se los descarga de los repositorios de imagenes de Vagrant.
+Antes de eso, indica que las máquinas que lee desde el fichero Vagrantfile están con KVM o libvirt que es la librería que se utiliza. Esto implica además que se puede ejecutar más de un proveedor distinto en el Vagrantfile.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant2}
+	\caption{Despliegue del Vagrantfile del proyecto - Obteniendo las imagenes y enlazando las máquinas box con el proveedor.}
+\end{figure}
+
+La siguiente parte del despliegue dependerá de cada proveedor. En nuestro caso, al usar KVM un emulador de hardware como QEMU se puede ver que se definen los parámetros del Hardware por defecto para una máquina virtual y los de la topología de la CPU. También el nombre de las
+máquinas virtuales definidas en el dominio de QEMU. Dependiendo del nº de máquinas definidas por nuestro código, la salida será muy larga ya que se ejecutan en paralelo todas las máquinas posibles.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant3}
+	\caption{Despliegue del Vagrantfile del proyecto - Definiendo el hardware virtual con QEMU.}
+\end{figure}
+
+Ahora es cuando vagrant arranca las máquinas, le inyecta su clave pública para poder gestionar el Software las máquinas virtuales y controlar su estado.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant4}
+	\caption{Despliegue del Vagrantfile del proyecto - Arranque, inyección SSH y fijando hostname.}
+\end{figure}
+
+Y tras terminar de configurar todo lo relacionado con la máquina, en el terminal nos aparecerá un mensaje como el siguiente indicando que ya podemos conectarno
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant5}
+	\caption{Despliegue del Vagrantfile del proyecto - Provisionamiento de la clave de SSH personal, cambiando DNS y Gateways.}
+\end{figure}
+
+Quedaría como infraestructura desplegada con Vagrant la que sigue:
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant6}
+	\caption{Despliegue del Vagrantfile del proyecto - infraestructura desplegada.}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.35]{img/vagrant8}
+	\caption{Despliegue del Vagrantfile del proyecto - infraestructura desplegada visualización en Virt-Manager.}
+\end{figure}
+
+
+\input{ansible.tex}
 
 
 % \begin{lstlisting}[style=mybash]
@@ -52,7 +236,7 @@
 
 %\begin{figure}[H]
 %	\centering
-%	\includegraphics[scale=0.30]{cuestion_1_1}
+%	\includegraphics[scale=0.35]{cuestion_1_1}
 %	\caption{Se puede ver que al no haber un fallo grave, el sistema lo nota como que sigue funcionando pero en un estado degradado.}
 %\end{figure}
 
@@ -64,6 +248,5 @@
 
 %-------Bibliografia-----------------------------
 
-%\input{bibliografia.tex}
-
+\input{bibliografia.tex}
 \end{document}
